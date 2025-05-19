@@ -2,9 +2,7 @@ export function createCursor<
   T extends { cid: string; createdAt: number; rowid: number } | undefined,
   R = T extends NonNullable<T> ? string : undefined,
 >(item: T): R {
-  return item
-    ? (`${item.createdAt}::${item.cid}+${item.rowid}` as R)
-    : (undefined as R);
+  return item ? (`${item.createdAt}::${item.cid}+${item.rowid}` as R) : (undefined as R);
 }
 
 export const cursorPattern = /(^$|^(\d+)::(\w+)\+(\d+))$/;

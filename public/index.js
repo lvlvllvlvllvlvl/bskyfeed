@@ -4,9 +4,7 @@
 /// <reference lib="dom" />
 
 function copyToClipboard(noticeFailed = false) {
-  const token = /** @type {HTMLInputElement} */ (
-    document.querySelector('#token')
-  ).value;
+  const token = /** @type {HTMLInputElement} */ (document.querySelector('#token')).value;
   navigator.serviceWorker.getRegistration().then((reg) => {
     reg?.active?.postMessage({ token });
   });

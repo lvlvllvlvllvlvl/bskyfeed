@@ -1,11 +1,8 @@
 import type { Context } from 'hono';
-import { env } from 'hono/adapter';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { decode } from 'hono/jwt';
 import type { ClientErrorStatusCode } from 'hono/utils/http-status';
-import { fetchPubkey, getPubkey, savePubkey } from '../pubkey';
-import { verifyJwt } from '../xrpc/verify';
 
 type Option =
   | {
@@ -13,84 +10,40 @@ type Option =
     }
   | undefined;
 
+function decodeJwt(jwt: string, c: Context): { payload: { exp?: number; iss?: string; aud?: string } } {
+  try {
+    return decode(jwt);
+  } catch {
+    throw authError(c, 401, 'unauthorized', 'malformed token');
+  }
+}
+
 // https://atproto.com/specs/xrpc#inter-service-authentication-temporary-specification
 export const XrpcAuth = (opt: Option) =>
-  createMiddleware(async (c, next) => {
-    const { FEED_HOST } = env<{ FEED_HOST: string }>(c);
-    if (new URL(c.req.url).host !== FEED_HOST) {
-      throw new HTTPException(404, {
-        res: c.json({ message: 'Not Found', error: 'not found' }, 404),
-      });
-    }
-
-    const jwt = c.req
-      .header('Authorization')
-      ?.match(/^Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/i)?.[1];
+  createMiddleware(async (c: Context<{ Bindings: Env; Variables: { iss: string } }>, next) => {
+    const jwt = c.req.header('Authorization')?.match(/^Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/i)?.[1];
 
     if (!jwt) {
       throw authError(c, 400, 'bad request', 'no authorization header');
     }
 
-    let iss: string | undefined;
-    let aud: string | undefined;
-    let exp: number | undefined;
-    try {
-      ({
-        // @ts-expect-error breaking by: https://github.com/honojs/hono/pull/2373
-        payload: { iss, exp, aud },
-      } = decode(jwt));
-    } catch {
-      throw authError(c, 401, 'unauthorized', 'malformed token');
-    }
+    const {
+      payload: { iss, exp, aud },
+    } = decodeJwt(jwt, c);
 
     if (!exp || !iss || exp * 1000 < Date.now()) {
-      // invalid jwt
       throw authError(c, 401, 'unauthorized', 'invalid token payload');
     }
 
-    if (aud !== `did:web:${FEED_HOST}`) {
+    if (aud !== `did:web:${new URL(c.req.url).host}`) {
       throw authError(c, 401, 'unauthorized', 'malformed token');
-    }
-
-    const pubkey = await getPubkey(c, iss);
-    if (!pubkey) {
-      if (opt?.allowGuest) {
-        // not registered. handle next handler with undefined 'iss'
-        await next();
-        return;
-      }
-      throw authError(c, 403, 'forbidden', 'access forbidden');
-    }
-
-    const verified = await verifyJwt(jwt, pubkey).catch(() => {
-      throw authError(c, 401, 'unauthorized', 'malformed token');
-    });
-    if (!verified) {
-      // refresh did key and re-verify
-      const pubkey = await fetchPubkey(iss);
-      if (!pubkey) {
-        // error on xrpc request to bsky server
-        throw new HTTPException(502, {
-          res: c.json({ error: 'request public key failure' }, 502),
-        });
-      }
-      const verified = await verifyJwt(jwt, pubkey);
-      if (!verified) {
-        throw authError(c, 401, 'unauthorized', 'token verification failure');
-      }
-      savePubkey(c, iss, pubkey);
     }
 
     c.set('iss', iss);
     await next();
   });
 
-function authError(
-  c: Context,
-  code: ClientErrorStatusCode,
-  message: string,
-  description: string,
-) {
+function authError(c: Context, code: ClientErrorStatusCode, message: string, description: string) {
   const reason = code === 401 ? 'invalid_token' : 'invalid_request';
   return new HTTPException(code, {
     res: c.json({ error: message }, code, {

@@ -21,10 +21,7 @@ function saveTokenToIndexedDB(token) {
     request.onsuccess = (event) => {
       // @ts-ignore
       const db = /** @type {IDBDatabase} */ (event.target.result);
-      const put = db
-        .transaction('config', 'readwrite')
-        .objectStore('config')
-        .put({ usage: 'token', token });
+      const put = db.transaction('config', 'readwrite').objectStore('config').put({ usage: 'token', token });
       put.onsuccess = () => {
         db.close();
         resolve(null);
@@ -49,10 +46,7 @@ function getTokenFromIndexedDB() {
     request.onsuccess = (event) => {
       // @ts-ignore
       const db = /** @type {IDBDatabase} */ (event.target.result);
-      const get = db
-        .transaction('config', 'readwrite')
-        .objectStore('config')
-        .get('token');
+      const get = db.transaction('config', 'readwrite').objectStore('config').get('token');
       get.onsuccess = (e) => {
         db.close();
         // @ts-ignore

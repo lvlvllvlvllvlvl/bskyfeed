@@ -19,6 +19,8 @@
     "wrangler": "^3.57.1"
   },
   "dependencies": {
+    "@atproto/api": "^0.15.7",
+    "@atproto/xrpc-server": "^0.7.18",
     "@hono/zod-validator": "^0.2.1",
     "@noble/secp256k1": "^2.1.0",
     "base58-js": "^2.0.0",

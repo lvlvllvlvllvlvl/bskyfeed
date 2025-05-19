@@ -25,25 +25,18 @@ function checkEnvVars() {
  * @param {string} password
  */
 function createSession(identifier, password) {
-  const req = new Request(
-    'https://bsky.social/xrpc/com.atproto.server.createSession',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ identifier, password }),
+  const req = new Request('https://bsky.social/xrpc/com.atproto.server.createSession', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify({ identifier, password }),
+  });
   return fetch(req).then((res) => {
     if (res.ok) {
-      return /** @type {Promise<{accessJwt: string, did: string}>} */ (
-        res.json()
-      );
+      return /** @type {Promise<{accessJwt: string, did: string}>} */ (res.json());
     }
-    console.error(
-      'Login failed. Please check "FEED_OWNER" and "APP_PASSWORD" env vars.',
-    );
+    console.error('Login failed. Please check "FEED_OWNER" and "APP_PASSWORD" env vars.');
     process.exit(1);
   });
 }
@@ -67,17 +60,14 @@ async function uploadBlob(token, filename) {
       console.log(e.toString());
       process.exit(1);
     });
-  const req = new Request(
-    'https://bsky.social/xrpc/com.atproto.repo.uploadBlob',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': `image/${ext}`,
-      },
-      body: blob,
+  const req = new Request('https://bsky.social/xrpc/com.atproto.repo.uploadBlob', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': `image/${ext}`,
     },
-  );
+    body: blob,
+  });
   return fetch(req).then((res) => {
     if (res.ok) {
       return /** @type {Promise<{ blob: undefined }>} */ (res.json());
@@ -110,17 +100,14 @@ async function putRecord(token, did, feedHost, imageRef) {
     },
   };
 
-  const req = new Request(
-    'https://bsky.social/xrpc/com.atproto.repo.putRecord',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(record),
+  const req = new Request('https://bsky.social/xrpc/com.atproto.repo.putRecord', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body: JSON.stringify(record),
+  });
   return fetch(req).then((res) => {
     if (res.ok) {
       return res.json();

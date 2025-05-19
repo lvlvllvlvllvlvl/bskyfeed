@@ -13,25 +13,15 @@ const addToCache = async (resources) => {
 };
 
 // @ts-expect-error force cast
-/** @type {ServiceWorkerGlobalScope} */ (self).addEventListener(
-  'install',
-  (event) => {
-    event.waitUntil(
-      Promise.all([
-        addToCache([
-          '/',
-          '/index.html',
-          '/index.js',
-          '/success.html',
-          '/error.html',
-          '/confirm.html',
-        ]),
-        // @ts-expect-error force cast
-        /** @type {ServiceWorkerGlobalScope} */ (self).skipWaiting(),
-      ]),
-    );
-  },
-);
+/** @type {ServiceWorkerGlobalScope} */ (self).addEventListener('install', (event) => {
+  event.waitUntil(
+    Promise.all([
+      addToCache(['/', '/index.html', '/index.js', '/success.html', '/error.html', '/confirm.html']),
+      // @ts-expect-error force cast
+      /** @type {ServiceWorkerGlobalScope} */ (self).skipWaiting(),
+    ]),
+  );
+});
 
 self.addEventListener('message', async (event) => {
   const token = event.data.token;
@@ -41,14 +31,11 @@ self.addEventListener('message', async (event) => {
 });
 
 // @ts-expect-error force cast
-/** @type {ServiceWorkerGlobalScope} */ (self).addEventListener(
-  'activate',
-  (event) => {
-    event.waitUntil(
-      // @ts-expect-error force cast
-      /** @type {ServiceWorkerGlobalScope} */ (self).clients.claim(),
-    );
-  },
-);
+/** @type {ServiceWorkerGlobalScope} */ (self).addEventListener('activate', (event) => {
+  event.waitUntil(
+    // @ts-expect-error force cast
+    /** @type {ServiceWorkerGlobalScope} */ (self).clients.claim(),
+  );
+});
 
 importScripts('./sw/token.js', './sw/fetch.js');
