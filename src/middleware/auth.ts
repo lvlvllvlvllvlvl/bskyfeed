@@ -3,14 +3,17 @@ import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { decode } from 'hono/jwt';
 import type { ClientErrorStatusCode } from 'hono/utils/http-status';
+import { JWTPayload } from 'hono/dist/types/utils/jwt/types';
 
 type Option =
   | {
-      allowGuest?: boolean;
-    }
+  allowGuest?: boolean;
+}
   | undefined;
 
-function decodeJwt(jwt: string, c: Context): { payload: { exp?: number; iss?: string; aud?: string } } {
+function decodeJwt(jwt: string, c: Context): {
+  payload: JWTPayload & { exp?: number; iss?: string; aud?: string, sub?: string }
+} {
   try {
     return decode(jwt);
   } catch {
@@ -20,15 +23,15 @@ function decodeJwt(jwt: string, c: Context): { payload: { exp?: number; iss?: st
 
 // https://atproto.com/specs/xrpc#inter-service-authentication-temporary-specification
 export const XrpcAuth = (opt: Option) =>
-  createMiddleware(async (c: Context<{ Bindings: Env; Variables: { iss: string } }>, next) => {
+  createMiddleware(async (c: Context<{ Bindings: Env; Variables: { iss?: string, sub?: string } }>, next) => {
     const jwt = c.req.header('Authorization')?.match(/^Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/i)?.[1];
 
     if (!jwt) {
-      throw authError(c, 400, 'bad request', 'no authorization header');
+      return await next();
     }
 
     const {
-      payload: { iss, exp, aud },
+      payload: { iss, exp, aud, sub }
     } = decodeJwt(jwt, c);
 
     if (!exp || !iss || exp * 1000 < Date.now()) {
@@ -40,6 +43,7 @@ export const XrpcAuth = (opt: Option) =>
     }
 
     c.set('iss', iss);
+    c.set('sub', sub);
     await next();
   });
 
@@ -47,7 +51,7 @@ function authError(c: Context, code: ClientErrorStatusCode, message: string, des
   const reason = code === 401 ? 'invalid_token' : 'invalid_request';
   return new HTTPException(code, {
     res: c.json({ error: message }, code, {
-      'WWW-Authenticate': `Bearer realm="${c.req.url}",error="${reason}",error_description="${description}"`,
-    }),
+      'WWW-Authenticate': `Bearer realm="${c.req.url}",error="${reason}",error_description="${description}"`
+    })
   });
 }

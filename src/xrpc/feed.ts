@@ -1,77 +1,90 @@
-import { AtpAgent } from '@atproto/api';
+import { AppBskyGraphFollow, AppBskyFeedGetFeedSkeleton, AtpAgent } from '@atproto/api';
 import { createFactory } from 'hono/factory';
 import { XrpcAuth } from '../middleware/auth';
 import { validateQuery } from '../middleware/validator';
 
-type TFeed = {
-  feed: { post: string }[];
-  cursor?: string;
-};
-type Record = {
+type Post = {
   uri: string;
-  cid: string;
-  value: { createdAt: string };
+  createdAt: unknown;
+  context: string[];
 };
 
-const agent = new AtpAgent({ service: 'https://bsky.social' });
+const PROFILE = 'https://bsky.app/profile/';
+
+const agent = new AtpAgent({
+  service: 'https://bsky.social', fetch: (req, init) => {
+    return fetch(new Request(req, init), {
+      cf: {
+        cacheTtl: 3600,
+        cacheEverything: true
+      }
+    });
+  }
+});
 
 const factory = createFactory();
 
 const collator = new Intl.Collator();
-const compare = (l: Record, r: Record) => -collator.compare(String(l.value.createdAt), String(r.value.createdAt));
+const compare = (l: Post, r: Post) => -collator.compare(String(l.createdAt), String(r.createdAt));
 
-function merge(l: Record[], r: Record[], limit: number): Record[] {
-  let li = 0;
-  let ri = 0;
-  for (let i = 0; i < limit; i++) {
-    if (li >= l.length) {
-      return l.concat(...r.slice(0, limit - li));
-    } else if (ri >= r.length) {
-      return r.concat(...l.slice(0, limit - ri));
-    } else {
-      // Assume both are sorted by createdAt in descending order
-      if (l[li].value.createdAt > r[ri].value.createdAt) {
-        ri++;
-      } else {
-        li++;
-      }
-    }
+async function getPosts(repo: string, context: string[], result: Post[]) {
+  try {
+    const res = await agent.com.atproto.repo
+      .listRecords({
+        repo,
+        collection: 'app.bsky.feed.post',
+        limit: 10
+      });
+    result.push(...res.data.records.map(({ uri, value: { createdAt } }) => ({ uri, createdAt, context })));
+  } catch (e) {
+    console.log('error getting posts', repo, e);
   }
-  // If the loop didn't return early, sum of li + ri should be less than limit
-  return l.slice(0, li).concat(...r.slice(0, ri));
+}
+
+async function getFollows(repo: string, seen: Record<string, string[]>) {
+  let cursor: string | undefined = undefined;
+  do {
+    try {
+      const follows = await agent.com.atproto.repo.listRecords({
+        repo,
+        limit: 100,
+        collection: 'app.bsky.graph.follow',
+        cursor
+      });
+      if (follows.success) {
+        cursor = follows.data.cursor;
+        for (const { value } of follows.data.records) {
+          if (!AppBskyGraphFollow.isRecord(value)) continue;
+          const follow = value as AppBskyGraphFollow.Record;
+          if (seen[follow.subject]) {
+            seen[follow.subject].push(repo);
+          }
+          seen[follow.subject] = [repo];
+        }
+      } else {
+        return seen;
+      }
+    } catch (e) {
+      console.log('error getting repo', repo, e);
+      return seen;
+    }
+  } while (cursor);
+  return seen;
 }
 
 export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth({ allowGuest: true }), validateQuery, async (c) => {
-  const actor = c.get('iss');
-  const limit = Number.parseInt(c.req.query().limit) || 50;
+  const me = c.get('iss') || 'did:plc:ardo67sxz73eamk2xh54rgwr';
+  const limit = Number.parseInt(c.req.query().limit) || 10;
 
-  let cursor: string | undefined = undefined;
-  let records: Record[] = [];
-  const seen = new Set<string>();
-  do {
-    const follows = await agent.app.bsky.graph.getFollows({ actor, cursor });
-    if (follows.success) {
-      cursor = follows.data.cursor;
-      for (const follow of follows.data.follows) {
-        if (seen.has(follow.did)) continue;
-        seen.add(follow.did);
-        agent.com.atproto.repo
-          .listRecords({
-            repo: follow.did,
-            collection: 'app.bsky.feed.post',
-            limit,
-          })
-          .then((res) => {
-            records = merge(records, res.data.records as Record[], limit).sort(compare);
-          });
-      }
-    } else {
-      cursor = undefined;
-    }
-  } while (cursor);
+  const repos = await getFollows(me, {});
+  await Promise.all(Object.keys(repos).map(follow => getFollows(follow, repos)));
 
-  return c.json<TFeed, 200>({
-    cursor: String(records.at(-1)?.value.createdAt),
-    feed: records.map((r) => ({ post: r.uri })),
+  let records: Post[] = [];
+  await Promise.all(Object.entries(repos).map(([follow, by]) => getPosts(follow, by, records)));
+  records.sort(compare);
+
+  return c.json<AppBskyFeedGetFeedSkeleton.OutputSchema, 200>({
+    // cursor: String(records.at(-1)?.value.createdAt),
+    feed: records.map((r) => ({ post: r.uri, feedContext: PROFILE + r.context.join(' ' + PROFILE) }))
   });
 });

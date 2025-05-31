@@ -7,7 +7,9 @@ const factory = createFactory();
 
 export const wellKnown = factory.createHandlers(cache({ cacheName: 'well-known' }), (c) => {
   const { FEED_HOST } = env<{ FEED_HOST: string }>(c);
-  if (new URL(c.req.url).host !== FEED_HOST) {
+  const host = new URL(c.req.url).host;
+  if (FEED_HOST && host !== FEED_HOST) {
+    console.warn('Invalid host:', host, "!=", FEED_HOST);
     throw new HTTPException(404, {
       res: c.json({ message: 'Not Found', error: 'not found' }, 404),
     });
@@ -15,7 +17,7 @@ export const wellKnown = factory.createHandlers(cache({ cacheName: 'well-known' 
 
   return c.json({
     '@context': ['https://www.w3.org/ns/did/v1'],
-    id: `did:web:${FEED_HOST}`,
+    id: `did:web:${host}`,
     alsoKnownAs: [],
     authentication: null,
     verificationMethod: [],
@@ -23,7 +25,7 @@ export const wellKnown = factory.createHandlers(cache({ cacheName: 'well-known' 
       {
         id: '#bsky_fg',
         type: 'BskyFeedGenerator',
-        serviceEndpoint: `https://${FEED_HOST}`,
+        serviceEndpoint: `https://${host}`,
       },
     ],
   });
