@@ -5,3 +5,10 @@ compatibility_date = "2025-04-08"
 
 [observability]
 logs.enabled = true
+
+[vars]
+SUBREQUEST_LIMIT = 50
+INDEXER_URL = 'https://indexer-hp2l.onrender.com/'
+
+[env.dev.vars]
+FALLBACK_USER = 'did:plc:ardo67sxz73eamk2xh54rgwr'
