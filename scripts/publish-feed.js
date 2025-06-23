@@ -46,7 +46,7 @@ function createSession(identifier, password) {
  *
  * @param {string} token - accessJwt
  * @param {string} filename
- * @returns
+ * @returns {Promise<{ blob: undefined }>}
  */
 async function uploadBlob(token, filename) {
   if (!filename) {
@@ -54,7 +54,12 @@ async function uploadBlob(token, filename) {
     return null;
   }
   const ext = filename.split('.').pop()?.toLowerCase().replace('jpg', 'jpeg');
-  const blob = await require('node:fs/promises')
+  const fs = require('node:fs/promises');
+  try {
+    const json = await fs.readFile(filename + '.json', 'utf8');
+    return JSON.parse(json);
+  } catch (ignored) {}
+  const blob = await fs
     .readFile(filename)
     .catch((e) => {
       console.log(e.toString());
@@ -68,9 +73,11 @@ async function uploadBlob(token, filename) {
     },
     body: blob,
   });
-  return fetch(req).then((res) => {
+  return fetch(req).then(async (res) => {
     if (res.ok) {
-      return /** @type {Promise<{ blob: undefined }>} */ (res.json());
+      const json = await res.json();
+      await fs.writeFile(filename + '.json', JSON.stringify(json, null, 2));
+      return json;
     }
     console.error('failed to upload image');
     process.exit(1);
@@ -90,11 +97,11 @@ async function putRecord(token, did, feedHost, imageRef) {
   const record = {
     repo: did,
     collection: 'app.bsky.feed.generator',
-    rkey: 'blue-bookmark',
+    rkey: 'of-following',
     record: {
       did: `did:web:${feedHost}`,
-      displayName: 'Blue Bookmark',
-      description: 'Private Bookmark Feed',
+      displayName: 'of following',
+      description: 'work in progress',
       avatar: imageRef?.blob,
       createdAt: new Date().toISOString(),
     },
@@ -121,7 +128,8 @@ async function main() {
   console.log('** Create Feed **');
   const { identifier, password, feedHost } = checkEnvVars();
   const { accessJwt, did } = await createSession(identifier, password);
-  const imageRef = await uploadBlob(accessJwt, './public/bluebookmark.png');
+  const imageRef = await uploadBlob(accessJwt, './public/of-following.png');
+  console.log(imageRef);
   await putRecord(accessJwt, did, feedHost, imageRef);
   console.log('Complete!');
 }

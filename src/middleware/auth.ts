@@ -42,6 +42,8 @@ export const XrpcAuth = (opt: Option) =>
       throw authError(c, 401, 'unauthorized', 'malformed token');
     }
 
+    console.log('decoded jwt', 'iss', iss, 'sub', sub);
+
     c.set('iss', iss);
     c.set('sub', sub);
     await next();
