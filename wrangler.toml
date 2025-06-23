@@ -2,3 +2,6 @@ name = "of-following"
 main = "src/index.ts"
 compatibility_flags = ["nodejs_compat"]
 compatibility_date = "2025-04-08"
+
+[observability]
+logs.enabled = true
