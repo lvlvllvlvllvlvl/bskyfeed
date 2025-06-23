@@ -27,6 +27,7 @@ export const XrpcAuth = (opt: Option) =>
     const jwt = c.req.header('Authorization')?.match(/^Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/i)?.[1];
 
     if (!jwt) {
+      console.log('no', c.req.header('Authorization') ? 'auth' : 'jwt', 'in request');
       return await next();
     }
 
@@ -46,7 +47,7 @@ export const XrpcAuth = (opt: Option) =>
 
     c.set('iss', iss);
     c.set('sub', sub);
-    await next();
+    return await next();
   });
 
 function authError(c: Context, code: ClientErrorStatusCode, message: string, description: string) {
