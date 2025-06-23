@@ -35,7 +35,7 @@ const compare = (l: Post, r: Post) => -collator.compare(String(l.createdAt), Str
 
 async function getPosts(repos: Record<string, string[]>, cursor: string = '*', limit = 100): Promise<Post[]> {
   const body: any = {
-    Q: `[* TO ${cursor}] -is:reply`,
+    Q: `createdAt:[* TO ${cursor}] -is:reply`,
     dids: Object.keys(repos),
     limit
   };
