@@ -4,7 +4,7 @@ function checkEnvVars() {
   const pair = [
     ['identifier', 'FEED_OWNER'],
     ['password', 'APP_PASSWORD'],
-    ['feedHost', 'FEED_HOST'],
+    ['feedHost', 'FEED_HOST']
   ];
   const result = /** @type {Object.<string, string>} */ ({});
   for (const [key, env] of pair) {
@@ -28,9 +28,9 @@ function createSession(identifier, password) {
   const req = new Request('https://bsky.social/xrpc/com.atproto.server.createSession', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password })
   });
   return fetch(req).then((res) => {
     if (res.ok) {
@@ -58,7 +58,8 @@ async function uploadBlob(token, filename) {
   try {
     const json = await fs.readFile(filename + '.json', 'utf8');
     return JSON.parse(json);
-  } catch (ignored) {}
+  } catch (ignored) {
+  }
   const blob = await fs
     .readFile(filename)
     .catch((e) => {
@@ -69,9 +70,9 @@ async function uploadBlob(token, filename) {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': `image/${ext}`,
+      'Content-Type': `image/${ext}`
     },
-    body: blob,
+    body: blob
   });
   return fetch(req).then(async (res) => {
     if (res.ok) {
@@ -101,19 +102,19 @@ async function putRecord(token, did, feedHost, imageRef) {
     record: {
       did: `did:web:${feedHost}`,
       displayName: 'of following',
-      description: 'work in progress',
+      description: 'shows posts from people you follow and people they follow\nsource code: https://github.com/lvlvllvlvllvlvl/bskyfeed/ (lvlvllvlvllvlvl/bskyfeed)',
       avatar: imageRef?.blob,
-      createdAt: new Date().toISOString(),
-    },
+      createdAt: new Date().toISOString()
+    }
   };
 
   const req = new Request('https://bsky.social/xrpc/com.atproto.repo.putRecord', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(record),
+    body: JSON.stringify(record)
   });
   return fetch(req).then((res) => {
     if (res.ok) {
