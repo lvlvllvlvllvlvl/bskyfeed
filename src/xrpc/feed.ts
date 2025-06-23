@@ -1,4 +1,4 @@
-import { AppBskyGraphFollow, AppBskyFeedGetFeedSkeleton, AtpAgent } from '@atproto/api';
+import { AppBskyFeedGetFeedSkeleton, AppBskyGraphFollow, AtpAgent } from '@atproto/api';
 import { createFactory } from 'hono/factory';
 import { XrpcAuth } from '../middleware/auth';
 import { validateQuery } from '../middleware/validator';
@@ -11,7 +11,7 @@ type SearchResult = {
 
 type Post = {
   uri: string;
-  createdAt: unknown;
+  createdAt: string;
   context: string[];
 };
 
@@ -30,12 +30,9 @@ const agent = new AtpAgent({
 
 const factory = createFactory();
 
-const collator = new Intl.Collator();
-const compare = (l: Post, r: Post) => -collator.compare(String(l.createdAt), String(r.createdAt));
-
 async function getPosts(repos: Record<string, string[]>, cursor: string = '*', limit = 100): Promise<Post[]> {
   const body: any = {
-    Q: `createdAt:[* TO ${cursor}] -is:reply`,
+    q: `+createdAt:[* TO ${cursor}] -is:reply`,
     dids: Object.keys(repos),
     limit
   };
@@ -100,10 +97,15 @@ export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth({ allowGu
   await Promise.all(Object.keys(repos).map(follow => getFollows(follow, repos)));
 
   let records: Post[] = await getPosts(repos, cursor, limit);
-  records.sort(compare);
+
+  const nextCursor = records.at(-1)?.createdAt;
+  console.log('cursor from', cursor, 'to', nextCursor);
 
   return c.json<AppBskyFeedGetFeedSkeleton.OutputSchema, 200>({
-    cursor: String(records.at(-1)?.createdAt),
-    feed: records.map((r) => ({ post: r.uri, feedContext: PROFILE + r.context.join(' ' + PROFILE) }))
+    cursor: nextCursor,
+    feed: records.map((r) => ({
+      post: r.uri,
+      feedContext: PROFILE + r.context.join(' ' + PROFILE)
+    }))
   });
 });
