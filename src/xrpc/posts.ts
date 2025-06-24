@@ -9,10 +9,10 @@ type Post = {
   createdAt: string;
 };
 
-export async function getPosts(repos: Record<string, string[]>, cursor: string = '*', limit = 100, url: string): Promise<Post[]> {
+export async function getPosts(repos: Set<string>, cursor: string = '*', limit = 100, url: string): Promise<Post[]> {
   const body: any = {
     q: `+createdAt:[* TO ${cursor}] -is:reply`,
-    dids: Object.keys(repos),
+    dids: [...repos],
     limit
   };
 

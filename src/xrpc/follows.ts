@@ -12,7 +12,7 @@ const agent = new AtpAgent({
 });
 
 export class Follows {
-  repos: Record<string, string[]> = {};
+  repos = new Set<string>();
   req_limit: number;
   req_count = 0;
 
@@ -21,12 +21,12 @@ export class Follows {
   }
 
   async ofFollows(me: string) {
-    await this.getFollows(me);
-    await Promise.all(Object.keys(this.repos).map(follow => this.getFollows(follow)));
+    await this.getFollows(me, true);
+    await Promise.all([...this.repos].map(follow => this.getFollows(follow)));
     return this.repos;
   }
 
-  async getFollows(repo: string) {
+  async getFollows(repo: string, loop = false) {
     let cursor: string | undefined = undefined;
     do {
       if (this.req_limit > 0 && this.req_count++ >= this.req_limit) {
@@ -44,10 +44,7 @@ export class Follows {
           for (const { value } of follows.data.records) {
             if (!AppBskyGraphFollow.isRecord(value)) continue;
             const follow = value as AppBskyGraphFollow.Record;
-            if (this.repos[follow.subject]) {
-              this.repos[follow.subject].push(repo);
-            }
-            this.repos[follow.subject] = [repo];
+            this.repos.add(follow.subject)
           }
         } else {
           return;
@@ -56,10 +53,10 @@ export class Follows {
         console.log('error getting repo', repo, e);
         return;
       }
-      // Checking Object.keys(this.repos).length is redundant eith subrequest limit of 50,
+      // Checking this.repos.length is redundant with subrequest limit of 50,
       // but note that json payload size to indexer is limited by
       // `spring.http.codecs.max-in-memory-size` (default is 256K)
-    } while (cursor);
+    } while (loop && cursor);
     return;
   }
 }

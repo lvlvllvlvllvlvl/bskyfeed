@@ -18,7 +18,6 @@ export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth({ allowGu
   let records = await getPosts(repos, cursor, limit, c.env.INDEXER_URL);
 
   const nextCursor = records.at(-1)?.createdAt;
-  console.log('cursor from', cursor, 'to', nextCursor);
 
   return c.json<AppBskyFeedGetFeedSkeleton.OutputSchema, 200>({
     cursor: nextCursor,
