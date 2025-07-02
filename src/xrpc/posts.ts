@@ -9,10 +9,10 @@ type Post = {
   createdAt: string;
 };
 
-export async function getPosts(repos: Set<string>, cursor: string = '*', limit = 100, url: string): Promise<Post[]> {
+export async function getPosts(dids: string[], cursor: string, limit = 100, url: string): Promise<Post[]> {
   const body: any = {
-    q: `+createdAt:[* TO ${cursor}] -is:reply`,
-    dids: [...repos],
+    q: `+createdAt:[* TO ${cursor || '*'}] -is:reply`,
+    dids,
     limit
   };
 
@@ -23,7 +23,7 @@ export async function getPosts(repos: Set<string>, cursor: string = '*', limit =
   });
 
   if (!res.ok) {
-    console.log(res.status, 'error getting posts', body, await res.text());
+    console.error(res.status, 'error getting posts', body, await res.text());
     return [];
   }
 

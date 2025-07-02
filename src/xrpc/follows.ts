@@ -12,7 +12,7 @@ const agent = new AtpAgent({
 });
 
 export class Follows {
-  repos = new Set<string>();
+  repos: string[] = [];
   req_limit: number;
   req_count = 0;
 
@@ -22,7 +22,7 @@ export class Follows {
 
   async ofFollows(me: string) {
     await this.getFollows(me, true);
-    await Promise.all([...this.repos].map(follow => this.getFollows(follow)));
+    await Promise.all(this.repos.map(follow => this.getFollows(follow)));
     return this.repos;
   }
 
@@ -44,13 +44,13 @@ export class Follows {
           for (const { value } of follows.data.records) {
             if (!AppBskyGraphFollow.isRecord(value)) continue;
             const follow = value as AppBskyGraphFollow.Record;
-            this.repos.add(follow.subject)
+            this.repos.push(follow.subject);
           }
         } else {
           return;
         }
       } catch (e) {
-        console.log('error getting repo', repo, e);
+        console.debug('error getting repo', repo);
         return;
       }
       // Checking this.repos.length is redundant with subrequest limit of 50,

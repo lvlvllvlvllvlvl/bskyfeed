@@ -7,7 +7,7 @@ import { getPosts } from './posts';
 
 const factory = createFactory();
 
-export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth({ allowGuest: true }), validateQuery, async (c) => {
+export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth(), validateQuery, async (c) => {
 
   const me = c.get('iss') || c.env.FALLBACK_USER;
   const limit = Number.parseInt(c.req.query().limit) || 100;
@@ -21,6 +21,6 @@ export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth({ allowGu
 
   return c.json<AppBskyFeedGetFeedSkeleton.OutputSchema, 200>({
     cursor: nextCursor,
-    feed: records.map((r) => ({ post: r.uri }))
+    feed: records.map((r) => ({ post: r.uri, created: r.createdAt }))
   });
 });

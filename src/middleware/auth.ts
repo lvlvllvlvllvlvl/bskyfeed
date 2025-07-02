@@ -5,12 +5,6 @@ import { decode } from 'hono/jwt';
 import type { ClientErrorStatusCode } from 'hono/utils/http-status';
 import { JWTPayload } from 'hono/dist/types/utils/jwt/types';
 
-type Option =
-  | {
-  allowGuest?: boolean;
-}
-  | undefined;
-
 function decodeJwt(jwt: string, c: Context): {
   payload: JWTPayload & { exp?: number; iss?: string; aud?: string, sub?: string }
 } {
@@ -22,12 +16,11 @@ function decodeJwt(jwt: string, c: Context): {
 }
 
 // https://atproto.com/specs/xrpc#inter-service-authentication-temporary-specification
-export const XrpcAuth = (opt: Option) =>
+export const XrpcAuth = () =>
   createMiddleware(async (c: Context<{ Bindings: Env; Variables: { iss?: string, sub?: string } }>, next) => {
     const jwt = c.req.header('Authorization')?.match(/^Bearer\s+([\w-]+\.[\w-]+\.[\w-]+)/i)?.[1];
 
     if (!jwt) {
-      console.log('no', c.req.header('Authorization') ? 'auth' : 'jwt', 'in request');
       return await next();
     }
 
@@ -42,8 +35,6 @@ export const XrpcAuth = (opt: Option) =>
     if (aud !== `did:web:${new URL(c.req.url).host}`) {
       throw authError(c, 401, 'unauthorized', 'malformed token');
     }
-
-    console.log('decoded jwt', 'iss', iss, 'sub', sub);
 
     c.set('iss', iss);
     c.set('sub', sub);
