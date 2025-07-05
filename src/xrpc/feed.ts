@@ -1,4 +1,3 @@
-import { AppBskyFeedGetFeedSkeleton } from '@atproto/api';
 import { createFactory } from 'hono/factory';
 import { XrpcAuth } from '../middleware/auth';
 import { validateQuery } from '../middleware/validator';
@@ -15,12 +14,5 @@ export const getFeedSkeletonHandlers = factory.createHandlers(XrpcAuth(), valida
 
   const repos = await new Follows((c.env.SUBREQUEST_LIMIT || 0) - 1).ofFollows(me);
 
-  let records = await getPosts(repos, cursor, limit, c.env.INDEXER_URL);
-
-  const nextCursor = records.at(-1)?.createdAt;
-
-  return c.json<AppBskyFeedGetFeedSkeleton.OutputSchema, 200>({
-    cursor: nextCursor,
-    feed: records.map((r) => ({ post: r.uri, created: r.createdAt }))
-  });
+  return getPosts(repos, cursor, limit, c.env.INDEXER_URL);
 });

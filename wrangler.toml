@@ -8,4 +8,4 @@ logs.enabled = true
 
 [vars]
 SUBREQUEST_LIMIT = 50
-INDEXER_URL = 'https://indexer-hp2l.onrender.com/'
+INDEXER_URL = 'https://indexer-hp2l.onrender.com/feed'
