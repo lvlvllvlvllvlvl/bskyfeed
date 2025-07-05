@@ -1,4 +1,4 @@
-import { AppBskyGraphFollow, AtpAgent } from '@atproto/api';
+import { AtpAgent } from '@atproto/api';
 
 const agent = new AtpAgent({
   service: 'https://bsky.social', fetch: (req, init) => {
@@ -42,9 +42,7 @@ export class Follows {
         if (follows.success) {
           cursor = follows.data.cursor;
           for (const { value } of follows.data.records) {
-            if (!AppBskyGraphFollow.isRecord(value)) continue;
-            const follow = value as AppBskyGraphFollow.Record;
-            this.repos.push(follow.subject);
+            this.repos.push(value.subject as string);
           }
         } else {
           return;

@@ -9,11 +9,11 @@ type Post = {
   createdAt: string;
 };
 
-export async function getPosts(dids: string[], cursor: string, limit = 100, url: string): Promise<Post[]> {
+export async function getPosts(dids: string[], before: string, limit = 100, url: string): Promise<Post[]> {
   const body: any = {
-    q: `+createdAt:[* TO ${cursor || '*'}] -is:reply`,
-    dids,
-    limit
+    before,
+    limit,
+    dids
   };
 
   const res = await fetch(url, {
